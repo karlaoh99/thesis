@@ -14,6 +14,9 @@
 \usepackage{xcolor}
 \usepackage{multicol}
 \usepackage{graphicx}
+\usepackage{multirow}
+\usepackage{array}
+\newcolumntype{P}[1]{>{\centering\arraybackslash}p{#1}}
 \floatstyle{plaintop}
 \restylefloat{table}
 \addbibresource{Bibliography.bib}
@@ -49,12 +52,12 @@
 
 \lstset{style=mystyle}
 
-\title{Sistema para la Predicción de los Pronósticos del Mundial de Atletismo}
+\title{Sistema para la Predicción de los \\\vspace{0.25cm} Pronósticos del Mundial de Atletismo}
 \author{\\\vspace{0.25cm}Karla Olivera Hernández}
 \advisor{\\\vspace{0.25cm}Dr. Yudivián Almeida Cruz}
 \degree{Licenciado en Ciencia de la Computación}
 \faculty{Facultad de Matemática y Computación}
-\date{Fecha\\\vspace{0.25cm}\href{https://github.com/username/repo}{github.com/username/repo}}
+\date{Noviembre de 2022}
 \logo{Graphics/uhlogo}
 \makenomenclature
 
@@ -74,6 +77,9 @@
 \newcommand{\nnorm}[1]{\left\lvert #1 \right\rvert }
 \renewcommand{\lstlistingname}{Ejemplo de código}
 \renewcommand{\lstlistlistingname}{Ejemplos de código}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{alizarin}{rgb}{0.82, 0.1, 0.26}
 
 \begin{document}
 
@@ -97,6 +103,7 @@
 
 \include{BackMatter/Conclusions}
 \include{BackMatter/Recomendations}
+\include{BackMatter/Anexos}
 \include{BackMatter/Bibliography}
 
 \end{document}

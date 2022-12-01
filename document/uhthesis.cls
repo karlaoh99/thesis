@@ -22,8 +22,8 @@
 \RequirePackage{footmisc}
 \RequirePackage{csquotes}
 \RequirePackage[
-	style=apa,
-	citestyle=authoryear,
+	style=ieee,
+	citestyle=numeric,
   hyperref=true,
 	backref=true
 	]{biblatex}
@@ -77,14 +77,14 @@
 \DeclareCiteCommand{\cite}
   {\usebibmacro{prenote}}
   {\usebibmacro{citeindex}%
-   \printtext[bibhyperref]{\usebibmacro{cite}}}
+   \printtext[bibhyperref]{[\usebibmacro{cite}]}}
   {\multicitedelim}
   {\usebibmacro{postnote}}
 
 \DeclareCiteCommand*{\cite}
   {\usebibmacro{prenote}}
   {\usebibmacro{citeindex}%
-   \printtext[bibhyperref]{\usebibmacro{citeyear}}}
+   \printtext[bibhyperref]{[\usebibmacro{citeyear}]}}
   {\multicitedelim}
   {\usebibmacro{postnote}}
 
@@ -189,6 +189,12 @@
    \addcontentsline{toc}{chapter}{Recomendaciones}%
     \chapter*{Recomendaciones}}%
   {}
+\newenvironment{anexos}%
+  {\cleardoublepage%
+   \phantomsection%
+   \addcontentsline{toc}{chapter}{Anexos}%
+    \chapter*{Anexos}}%
+  {}
 \newenvironment{dedication}%
   {\cleardoublepage%
    \thispagestyle{empty}%
@@ -222,8 +228,10 @@
     \vskip 0.5cm
     {\Large Tutor: \textbf{\@advisor}} \\
     \vfill
-    {\large Trabajo de Diploma \\presentado en opción al título de \\ \@degree} \\
-    \vskip 1cm
+    {\large Trabajo de Diploma \\presentado en opción al título de \\\vspace{0.15cm} \@degree} \\
+    \vskip 0.25cm
+    \includegraphics[width=3cm]{Graphics/qrcode}
+    \vskip 0.25cm
     \@date
   \end{center}
 }

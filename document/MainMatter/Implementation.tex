@@ -1,1 +1,556 @@
 \chapter{Detalles de Implementación y Experimentos}\label{chapter:implementation}
+
+Una vez concebida y planteada la propuesta del modelo de predicción, se da paso a una explicación de los detalles de implementación; así como las herramientas que fueron utilizadas para la extracción y procesamiento de los datos, para la modelación del sistema y finalmente la optimización de los parámetros. Por último, se verifica la viabilidad de la solución a través de la realización de un conjunto de pruebas para luego presentar y discutir los resultados obtenidos en estos experimentos.
+
+\section{Tecnologías y herramientas utilizadas}
+
+\subsection{Lenguaje de programación Python}
+
+Son muchos los lenguajes que se usan hoy en día en el desarrollo de proyectos de ciencias de datos, pero hay varios que destacan por las capacidades que ofrecen para ejecutar operaciones de análisis de datos de una forma más eficiente que los lenguajes tradicionales. Entre ellos destacan R, Python, MATLAB, Octave y Julia.
+
+Python \cite{python} se ubica en el primer lugar de la lista gracias a la simplicidad de su sintaxis, su potencia y a todas las facilidades que brinda.  Tiene estructuras de datos de alto nivel eficientes y un enfoque simple pero efectivo para la programación orientada a objetos. La sintaxis elegante y la tipificación dinámica de Python lo convierten en un lenguaje ideal para secuencias de comandos y desarrollo rápido de aplicaciones en muchas áreas en la mayoría de las plataformas.
+
+En la ciencia de datos, Python suele utilizarse para el procesamiento de datos, la implementación de algoritmos de análisis de datos y el entrenamiento de algoritmos de aprendizaje automático y aprendizaje profundo. Una de las principales razones por las que esto ocurre, además de las expuestas anteriormente, es el gran abanico de bibliotecas y paquetes científicos que ofrece, los cuales proporcionan disímiles funcionalidades que son requeridas para cumplir las exigencias de la solución concebida. 
+
+\subsection{Pandas}
+
+Pandas \cite{pandas} es una biblioteca muy popular de código abierto dentro de los desarrolladores de Python y, sobre todo, dentro del ámbito de la Ciencia de Datos. Proporciona estructuras de datos rápidas, flexibles y expresivas diseñadas para que trabajar con datos relacionales o etiquetados sea fácil e intuitivo. Dos de las funcionalidades, que la ubican en el número uno de su categoría y por las que fue escogido el paquete para el desarrollo de la solución, son: el objeto DataFrame rápido y eficiente para la manipulación de datos con indexación integrada y las herramientas para leer y escribir datos entre estructuras de datos en memoria y diferentes formatos, en este caso CSV. 
+Las marcas de los atletas una vez que son obtenidas se guardan en archivos CSV. Luego son leidas con ayuda de la función \textit{read\_csv} y guardadas en objetos DataFrame.
+
+\subsection{Numpy}
+
+NumPy \cite{numpy} es una biblioteca de Python que proporciona un objeto de matriz multidimensional, varios objetos derivados (como matrices y matrices enmascaradas) y una variedad de rutinas para operaciones rápidas en matrices, que incluyen manipulación matemática, lógica, clasificación, selección, transformadas discretas de Fourier, álgebra lineal básica, operaciones estadísticas básicas y mucho más. Dentro de la solución propuesta se utiliza su implementación de matriz por las facilidades que brinda para el manejo de los datos junto con algunas funcionalidades que ya vienen definidas.   
+
+\subsection{Scikit-learn} 
+
+Scikit-learn \cite{sklearn} es una biblioteca de aprendizaje automático de código abierto que admite el aprendizaje supervisado y no supervisado. También proporciona varias herramientas para el ajuste de modelos, preprocesamiento de datos, selección de modelos, evaluación de modelos y muchas otras utilidades. En específico se utiliza su implementación de la estimación de la densidad del kernel (KernelDensity \cite{kerneldensity}) para el modelado de los atletas.
+
+\subsection{SMAC3}
+
+SMAC3 \cite{smac} es una herramienta para optimizar los parámetros de algoritmos arbitrarios, incluida la optimización de hiperparámetros de algoritmos de aprendizaje automático. El núcleo principal consiste en la Optimización Bayesiana para decidir de manera eficiente cuál entre dos configuraciones funciona mejor. 
+
+La metodología propuesta en el capítulo anterior presenta la necesidad de optimizar una serie de parámetros, para lo cual se escogió el uso de esta biblioteca. La decisión no solo fue tomada por la sencillez de su uso, sino también por la eficiencia que ha presentado frente a otros algoritmos \cite{lindauer2022smac3}. Además, SMAC3 está diseñado para ser aplicable de manera robusta a una amplia gama de casos de uso diferentes, lo cual está condicionado principalmente por la integración con la biblioteca ConfigSpace \cite{configspace} que facilita y permite la definición de hiperparámetros categóricos, continuos, jerárquicos y/o condicionales.
+
+\subsection{Google Colaboratory}
+
+Colab \cite{colab} permite a cualquier usuario escribir y ejecutar código arbitrario de Python en el navegador. Es especialmente adecuado para tareas de aprendizaje automático, análisis de datos y educación. Desde un punto de vista más técnico, Colab es un producto similar a Jupyter Notebook, alojado en la nube por Google Research y que no requiere configuración para su uso, al tiempo que brinda acceso gratuito a los recursos informáticos, incluidas las GPU.
+
+Este servicio, conectado a Google Drive, fue utilizado en los procesos de captura de los datos y en la ejecución de los experimentos.
+
+\section{Implementación del prototipo}
+
+Luego de presentar las herramientas y tecnologías utilizadas, se da paso a una explicación detallada de cómo se realizó la implementación del prototipo propuesto en la figura \ref{fig:diagram1}.
+
+\subsection{Captura de datos}\label{section:capdatos}
+
+Los datos que utiliza el sistema se obtienen del sitio WorldAthletics, autoridad rectora a nivel mundial del atletismo y encargada de la celebración de diferentes competencias, entre las que destaca el Campeonato Mundial de Atletismo. Además, se responsabiliza de la estandarización de los métodos para la medición de las marcas en las distintas pruebas, de verificar y mantener todos los récords del mundo del atletismo y de registrar las marcas obtenidas por los atletas en las diferentes competencias. 
+
+El proceso de obtención de los datos fue dividido en dos etapas. En la primera, se recoge de forma manual la información de la competencia: su fecha de inicio y los eventos que se van a realizar, sus modalidades de género y si el objetivo que siguen los atletas es el de obtener la mayor marca (maximizar) o menor (minimizar). Una vez obtenido esto, se pasa a la segunda etapa, que es la extracción por cada evento de la lista de atletas que van a participar en la competencia. Luego se recorren estas listas y se obtienen las marcas de interés personales de cada atleta, junto con la fecha en que se obtuvieron. 
+
+Para la captura de los datos mencionados en la segunda etapa se hizo uso de un \textit{scrapper} creado en el grupo de investigación de Inteligencia Artificial de la Facultad de Matemática y Computación de la Universidad de la Habana. Este fue implementado con el objetivo de obtener los datos para la predicción de las modalidades de atletismo en los Juegos Olímpicos del 2020, pero su código fuente puede ser adaptado para la extracción de los datos de la competencia que se desea analizar.
+
+Una vez terminado este proceso, se tienen para cada evento y modalidad de género, todas las marcas de interés de cada atleta en archivos independientes en formato CSV.
+
+Para el proceso de optimización es necesario recoger los resultados finales de alguna competencia ya celebrada. Estos datos son obtenidos a través del uso de un pequeño \textit{scrapper} que recoge la información de una sección dedicada a registrar estos resultados dentro del mismo sitio WorldAthletics. Este \textit{scrapper} es implementado utilizando las bibliotecas Requests y BeautifulSoup. Por último, con el objetivo de evaluar la metodología, se extraen además los resulados finales de las competencias de las que se decida realizar el proceso de predicción. Todos los resultados quedan guardados en un archivo JSON para cada competencia. 
+
+\subsection{Preprocesamiento de los datos}
+
+Los datos extraídos de cada atleta, antes de ser usados en el proceso de predicción, necesitan ser procesados para eliminar todas aquellas marcas que no sean válidas y, además, convertirlas en un formato en el que sea fácil de trabajar. Existen varios casos en que un atleta no pudo terminar una carrera y se registra en el sitio como no terminada, por lo que esta marca debe ser desechada antes de continuar. Además, es de interés conocer la fecha en que se obtuvo cada una, por lo que es necesario convertirla a la clase \textit{datetime} de Python para facilitar su uso en fases posteriores de la implementación. Para el caso en que se quiera simular la realización de algún evento ocurrido en el pasado, se realiza un proceso de verificación para constatar que no haya ninguna marca registrada después de la fecha de comienzo de la competencia, puesto que se desea ser fiel y transparente en el proceso de predicción. Por último, los datos de cada atleta son guardados en un objeto \textit{DataFrame} de la biblioteca pandas.
+
+\subsection{Modelado de la función de resultados de un atleta}
+
+Una etapa crucial en el proceso de predicción es poder generar marcas que es muy probable que obtengan los atletas. Se hace uso del modelo Kernel Distribution Estimation (KDE) para estimar la función de densidad de probabilidad de estas marcas o tiempos. Se utiliza la clase \textit{KernelDensity} que tiene implementada la biblioteca scikit-learn. Para cada atleta se crea una instancia de esta clase con un ancho de banda previamente escogido y se entrena el modelo con marcas obtenidas anteriormente por él llamando a la función \textit{fit}.
+
+\lstset{language=Python, captionpos=b, keywordstyle=\color{alizarin},stringstyle=\color{codegreen}}
+
+\begin{lstlisting}[caption= Modelado y entrenamiento de la función de resultados de un atleta, label = code:kde]
+    def create_kde_model(results, bandwidth):
+        model = KernelDensity(bandwidth=bandwidth, kernel='gaussian')
+        model.fit(X = results.reshape((-1,1)))
+        return model
+\end{lstlisting}
+
+Antes de realizar el procesamiento de entrenamiento del modelo y como se explicó en el capítulo anterior, se decidió realizar algunas modificaciones en el \textit{DataFrame} que contiene las marcas. Ante la necesidad de darle un mayor peso a las marcas más recientes, y una vez definida la ponderación de los años, se repiten las marcas que se encuentran en un año en específico la cantidad de veces escogida. Por último, ante el problema de la existencia de una gran diferencia en cantidad de datos registrados entre atletas, cada marca es transformada utilizando las ecuaciones \ref{eqn:alpha1} y \ref{eqn:alpha2}. 
+
+\begin{lstlisting}[caption= Actualización de los valores de las marcas de un atleta según la cantidad que tiene registradas y la ponderación de los años, label = code:ponderation]
+    def ponderate_marks(marks, maximize, years_weight, alpha):
+        if maximize:
+            alpha = -abs(alpha)
+        else:
+            alpha = abs(alpha)
+
+        pond_marks = []
+        # Extending DataFrame, prioritizing the recent marks
+        for i in range(len(marks)):
+            row = marks.iloc[i]
+            date = row[0]
+            times = years_weight[date.year]
+            pond_marks.extend([row] * times)
+
+        # Updating the marks according to the amount that
+        # is registered
+        df_marks = pd.DataFrame(pond_marks)
+        pond_val = 1 + alpha / len(pond_marks)
+        df_marks.Result *= pond_val
+            
+        return df_marks
+\end{lstlisting}
+
+El modelo de cada atleta es guardado haciendo uso de la función \textit{dump} de la biblioteca \textit{dill}, que crea archivos de extensión PKL, los cuales van a ser cargados cuando sea necesario su uso posteriormente.
+
+\subsection{Simulación de la competencia}\label{section:simcomp}
+
+Una vez que se cuenta con todos los modelos ya creados, se procede a simular la competencia. Para cada evento, se recorre su lista de atletas y se obtiene un nuevo registro de cada uno usando la función \textit{sample} de \textit{KernelDensity}. Estas marcas son organizadas según el criterio que siga el evento (maximizar o minimizar) y se obtiene un ranking. Este experimento se ejecuta un número definido de veces y se construye el ranking final siguiendo la metodología explicada en el capítulo anterior. 
+
+Contando con el resultado de \textit{n} simulaciones, para calcular el atleta que queda en la posición \textit{i} y conociendo aquellos que ya fueron ubicados en lugares anteriores (\textit{fst\_positions}) se utiliza la función \ref{code:ranking}.
+
+\begin{lstlisting}[caption= Función encargada de obtener el atleta que ocupa la posición i del ranking final, label = code:ranking]
+    def get_ith_place(places, i, fst_positions) -> int:
+        # Creates a list of size equal to the number of athletes   
+        record = np.zeros(places.shape[1], dtype=int)
+
+        for place in places:        
+            for j in range(i+1):
+                # Check if the athlete has not been selected
+                if place[j] in fst_positions:
+                    continue
+                
+                record[place[j]] += 1
+                break
+
+        return np.argmax(record)
+\end{lstlisting}
+
+Los resultados finales de la predicción para cada evento se almacenan en un archivo JSON.
+
+\subsection{Optimización}
+
+Una vez implementado el sistema de predicción existen ciertos parámetros cuyo valor debe ser escogido para cada evento y modalidad de la competencia. Estos son: el ancho de banda de los modelos KDE de los atletas, el valor de \textit{alpha} con el cual se trata de crear un balance entre los atletas que tienen pocas marcas registradas contra los que tienen muchas, la ponderación que se le va a asignar a cada año, la cantidad de años a tener en cuenta y, por último, el número de simulaciones a ejecutar para cada evento. En la presente investigación se decidió fijar la cantidad de años y tomar solo los últimos tres, debido a que las marcas obtenidas en ese período son las más recientes y las que mejor deben representar el estado actual del atleta.
+
+\subsubsection*{Optimizador de parámetros}
+
+Se define la clase \textit{EventParamsOptimizer} que para un evento en específico y un conjunto de parámetros, ejecuta el proceso de optimización y devuelve los valores escogidos. En esta clase se implementa una función \textit{optimize} encargada de llevar a cabo este proceso.
+
+\begin{lstlisting}[caption=Clase EventParamsOptimizer, label = code:optimizer]
+    class EventParamsOptimizer:
+        def __init__(self, runcount, calculate_error):
+            # Number of congigurations to evaluate
+            self.runcount = runcount 
+            
+            # Function that calculates the error of a ranking
+            self.calculate_error = calculate_error 
+
+        def optimize(self, athletes_marks, actual_ranking, event,
+                     sex):        
+            """Runs the optimization process."""
+
+\end{lstlisting}
+
+En el cuerpo de la función se realizan los siguientes pasos:
+
+\subsubsection*{Espacio de configuraciones}	
+
+Creación del espacio de configuraciones, donde se define el espacio de búsqueda de los hiperparámetros y, por lo tanto, los rangos legales y valores por defecto de los parámetros ajustables. Se hace uso de la biblioteca ConfigSpace.
+
+\begin{lstlisting}[caption= Definición del espacio de búsqueda de los hiperparámetros, label = code:configspace]
+    configspace = ConfigurationSpace()
+    configspace.add_hyperparameter(UniformFloatHyperparameter(
+        'bandwidth', lower=1e-3, upper=half_range, log=False))
+    configspace.add_hyperparameter(OrdinalHyperparameter(
+        'sim_times', sequence=[str(n) for n in np.arange(5000, 
+        10001, 1000)]))
+    configspace.add_hyperparameter(UniformFloatHyperparameter(
+        'alpha', lower=0, upper=1, log=False))
+    configspace.add_hyperparameter(UniformIntegerHyperparameter(
+        'y0', lower=1, upper=5, log=False))
+    configspace.add_hyperparameter(UniformIntegerHyperparameter(
+        'y1', lower=1, upper=5, log=False))
+    configspace.add_hyperparameter(UniformIntegerHyperparameter(
+        'y2', lower=1, upper=5, log=False))
+\end{lstlisting}
+
+\subsubsection*{Función objetivo}
+
+La función objetivo toma una configuración del espacio de configuración y devuelve un valor de rendimiento. En esta función es donde se implementa la metodología a seguir durante la optimización. Para cada configuración se desarrolla un proceso de simulación igual al explicado en la sección \ref{section:simcomp} y una vez obtenido un ranking final se calcula un error, el cual es devuelto por la función.
+
+\subsubsection*{Escenario}
+
+El escenario es utilizado para proporcionar variables de entorno, como es el caso de los límites de tiempo o de iteraciones del proceso de optimización y el directorio dónde se desean guardar los resultados.
+
+\begin{lstlisting}[caption= Definición del escenario de optimización, label = code:scenario]
+    scenario = Scenario({
+        "run_obj": "quality",  
+        "runcount-limit": self.runcount,
+        "cs": configspace,
+    })
+\end{lstlisting}
+
+\subsubsection*{SMAC}
+
+SMAC ofrece varias fachadas que satisfacen muchos casos de uso y son cruciales para lograr el máximo rendimiento. La idea detrás de las fachadas es proporcionar una interfaz simple para SMAC, que sea fácil de usar y comprender sin profundizar mucho en la lógica que tiene por detrás. Específicamente para la optimización de hiperparámetros ofrece SMAC4HPO, por lo que se usa en el proceso de optimización. Una vez creada la instancia de la clase, se llama a la función \textit{optimize} que devuelve la mejor configuración.
+
+\begin{lstlisting}[caption= Instancia de la clase SMAC4HPO, label = code:smac]
+    smac = SMAC4HPO(scenario=scenario, tae_runner=train)
+    best_found_config = smac.optimize()
+\end{lstlisting}
+
+\section{Experimentos}
+
+Con el objetivo de comprobar la viabilidad de la metodología propuesta, se da paso a ejecutar una serie de experimentos haciendo uso de las herramientas implementadas y que fueron presentadas en la sección anterior.
+
+\subsection*{Escenario de prueba}
+
+\begin{itemize}
+    \item Datos: Se extrajeron los datos de tres competencias pasadas: Campeonato Mundial de Atletismo Doha 2019, certamen atlético de los Juegos Olímpicos Tokio 2020 y el Campeonato Mundial de Atletismo Oregón 2022.
+    \item Hardware: Se utilizó una computadora portátil con un procesador 11th Gen Intel(R) Core(TM) 5-11320H @ 3.20GHz (8 CPUs), 16 GB de memoria RAM y sistema operativo Debian GNU/Linux 9.13.
+\end{itemize}
+
+\subsection*{Diseño y resultados de los experimentos}
+
+Dos competencias fueron escogidas para participar en el proceso de predicción y comprobar la precisión a partir de los resultados reales que se obtuvieron. Estas fueron los Juegos Olímpicos Tokio 2020 y el Campeonato Mundial de Atletismo Oregón 2022. Por otro lado, se tomaron los datos del Campeonato Mundial de Atletismo Doha 2019 para poder realizar el proceso de optimización de los parámetros que intervienen en el modelado y simulación de las competencias.
+
+Los eventos analizados para cada competencia se presentan en la Tabla \ref{tab:events}. Cabe aclarar que las disciplinas de relevo no pudieron ser predichas, puesto que al depender de las actuaciones de varios atletas y no uno solo, no cumple con las restricciones necesarias para utilizar el modelo de resultados de los atletas propuesto.
+
+\begin{table}[H]
+    \centering
+    \resizebox{15cm}{!} {
+        \begin{tabular}{c c c}
+            100 metros planos & Salto de altura & 110 metros con vallas \\
+            200 metros planos & Salto con pértiga & 400 metros con vallas \\
+            400 metros planos & Salto largo & 3000 metros con obstáculos \\
+            800 metros planos & Salto triple & Marcha 20 kilómetros \\
+            1500 metros planos & Lanzamiento de la bala & Maratón \\
+            5000 metros planos & Lanzamiento del disco &  Decatlón \\
+            10000 metros planos & Lanzamiento del martillo & Heptatlón \\
+            100 metros con vallas & Lanzamiento de la jabalina &  \\
+        \end{tabular}
+        \caption{Eventos analizados en el proceso de predicción para cada competencia}
+        \label{tab:events}
+    }
+\end{table}
+
+Los experimentos consisten en predecir cada competencia con tres configuraciones de parámetros diferentes, una definida por un experto y las otras dos son obtenidas luego de hacer uso de la herramienta de optimización implementada. Para realizar el proceso de optimización se escogió el Campeonato Mundial de Atletismo Doha 2019. Una vez extraídos los datos necesarios de la competencia, procedimiento explicado en la sección \ref{section:capdatos}, se dio paso a la obtención de las dos configuraciones de parámetros, cada una minimizando uno de los errores propuestos en la sección \ref{sec:errors}.
+
+En el Campeonato Mundial de Atletismo celebrado en Oregón en el año 2022, se incluye por primera vez la marcha de 35 kilómetros y se elimina la marcha de 50 kilómetros. Al no tener alguna competencia de referencia con la cual optimizar los valores para este evento, se realizó este proceso con los datos de esta misma competencia. Es por esta razón que no se muestran los resultados de este evento, pero sí se presentan los valores obtenidos para ser utilizados en futuras pruebas que se deseen realizar. La marcha de 50 kilómetros también fue eliminada de los resultados presentados, ya que se desea hacer una comparación final entre las dos competencias analizadas.
+
+Para conseguir un análisis más claro de los resultados finales del proceso de predicción, se definieron cinco variables cuyo valor se calculó para cada uno de los eventos y sus modalidades. Las variables son:
+
+\begin{itemize}
+    \item cantidad de finalistas acertados: los atletas que se predijo correctamente que quedarían entre las primeras ocho posiciones, aunque no en la posición exacta.
+    \item cantidad de finalistas acertados que se predijo su posición exacta.
+    \item cantidad de medallistas acertados: los atletas que se predijo correctamente que quedarían entre las primeras tres posiciones, aunque no en la posición exacta.
+    \item cantidad de medallistas acertados que se predijo su posición exacta.
+    \item cantidad de campeones acertados: los atletas que se predijo correctamente que ocuparían el primer lugar.
+\end{itemize}
+    
+Tanto la configuración definida por el experto como las obtenidas durante la optimización se presentan al final del documento dentro de los anexos. En las siguientes secciones se presentan los resultados obtenidos para cada competencia y cada conjunto de parámetros.
+
+\subsection{Juegos Olímpicos Tokio 2020}
+
+Para la predicción de los resultados del certamen de atletismo de los Juegos Olímpicos de Tokio 2020, que debido a la incidencia de la Covid-19 se celebró en el 2021, se tomaron las marcas de los atletas obtenidas en ese año, antes del inicio de los juegos, y los dos anteriores. Es importante destacar que esta competencia se desarrolló cuando aún se sufrían las consecuencias de la pandemia. Se conocían muy pocas marcas de los atletas debido a que muchos certámenes deportivos fueron cancelados y varios atletas sufrieron la enfermedad.
+
+En la tabla \ref{tab:manualtokio} se muestran los resultados luego de predecir cada uno de los eventos utilizando los valores del conjunto de parámetros definidos por un experto. La tabla \ref{tab:error1tokio} muestra los resultados con los parámetros optimizados con la métrica de error 1, mientras que la \ref{tab:error2tokio} los optimizados tomando el error 2. En la tabla \ref{tab:resumentokio} se presenta una comparación entre los tres resultados obtenidos.
+
+\begin{table}[H]
+    \centering
+    \resizebox{15cm}{!} {
+        \begin{tabular}{|c|P{1.3cm}|P{1.2cm}|P{1.3cm}|P{1.2cm}|P{1.4cm}|P{1.2cm}|P{1.45cm}|P{1.2cm}|P{1.3cm}|P{1.2cm}|}
+            \hline
+            \multirow{2}{*}{Eventos} & \multicolumn{2}{c|}{No. de finalistas} & \multicolumn{2}{c|}{No. de finalistas} & \multicolumn{2}{c|}{No. de medallistas} & \multicolumn{2}{c|}{No. de medallistas} & \multicolumn{2}{c|}{No. de campeones} \\
+                                     & \multicolumn{2}{c|}{acertados}         & \multicolumn{2}{c|}{acertados}         & \multicolumn{2}{c|}{acertados}          & \multicolumn{2}{c|}{acertados}          & \multicolumn{2}{c|}{acertados} \\ 
+                                     & \multicolumn{2}{c|}{}                  & \multicolumn{2}{c|}{en posición}       & \multicolumn{2}{c|}{}                   & \multicolumn{2}{c|}{en posición}        & \multicolumn{2}{c|}{} \\ 
+                                     \cline{2-11}
+            & F & M & F & M & F & M & F & M & F & M \\\hline
+            100 metros planos & 3 & 3 & 1 & 0 & 3 & 1 & 1 & 0 & 0 & 0 \\
+            200 metros planos & 3 & 5 & 0 & 0 & 1 & 2 & 0 & 0 & 0 & 0 \\
+            400 metros planos & 4 & 5 & 1 & 1 & 1 & 2 & 1 & 1 & 1 & 0 \\
+            800 metros planos & 3 & 3 & 0 & 1 & 1 & 1 & 0 & 0 & 0 & 0 \\
+            1500 metros planos & 4 & 3 & 1 & 0 & 3 & 2 & 0 & 0 & 0 & 0 \\
+            5000 metros planos & 1 & 5 & 0 & 1 & 1 & 2 & 0 & 1 & 0 & 1 \\
+            10000 metros planos & 3 & 6 & 0 & 0 & 3 & 2 & 0 & 0 & 0 & 0 \\
+            100 metros con vallas & 3 & - & 2 & - & 2 & - & 2 & - & 1 & - \\
+            110 metros con vallas & - & 4 & - & 0 & - & 1 & - & 0 & - & 0 \\
+            400 metros con vallas & 6 & 6 & 4 & 3 & 3 & 2 & 3 & 2 & 1 & 1 \\
+            3000 metros con obstáculos & 4 & 2 & 0 & 0 & 1 & 1 & 0 & 0 & 0 & 0 \\
+            Salto de altura & 7 & 5 & 0 & 1 & 2 & 2 & 0 & 1 & 0 & 0 \\
+            Salto con pértiga & 4 & 6 & 0 & 1 & 2 & 1 & 0 & 1 & 0 & 1 \\
+            Salto largo & 5 & 4 & 0 & 1 & 1 & 2 & 0 & 1 & 0 & 0 \\
+            Salto triple & 7 & 6 & 1 & 0 & 1 & 2 & 1 & 0 & 1 & 0 \\
+            Lanzamiento de la bala & 4 & 5 & 3 & 2 & 3 & 2 & 3 & 2 & 1 & 1 \\
+            Lanzamiento del disco & 5 & 5 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 \\
+            Lanzamiento del martillo & 5 & 5 & 0 & 2 & 0 & 2 & 0 & 0 & 0 & 0 \\
+            Lanzamiento de la jabalina & 4 & 2 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\
+            Maratón & 3 & 4 & 0 & 0 & 2 & 1 & 0 & 0 & 0 & 0 \\
+            Marcha 20 kilómetros & 4 & 4 & 1 & 0 & 1 & 1 & 1 & 0 & 0 & 0 \\
+            Heptatlón & 4 & - & 0 & - & 1 & - & 0 & - & 0 & - \\
+            Decatlón & - & 5 & - & 1 & - & 2 & - & 1 & - & 1 \\
+            \hline
+            Total & 86 & 93 & 16 & 16 & 34 & 34 & 14 & 12 & 6 & 6 \\ \hline
+        \end{tabular}
+        \caption{Cantidad de predicciones acertadas con respecto al resultado real en Tokio 2020 (Parámetros fijados por expertos)}
+        \label{tab:manualtokio}
+    }
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \resizebox{15cm}{!} {
+        \begin{tabular}{|c|P{1.3cm}|P{1.2cm}|P{1.3cm}|P{1.2cm}|P{1.4cm}|P{1.2cm}|P{1.45cm}|P{1.2cm}|P{1.3cm}|P{1.2cm}|}
+            \hline
+            \multirow{2}{*}{Eventos} & \multicolumn{2}{c|}{No. de finalistas} & \multicolumn{2}{c|}{No. de finalistas} & \multicolumn{2}{c|}{No. de medallistas} & \multicolumn{2}{c|}{No. de medallistas} & \multicolumn{2}{c|}{No. de campeones} \\
+                                     & \multicolumn{2}{c|}{acertados}         & \multicolumn{2}{c|}{acertados}         & \multicolumn{2}{c|}{acertados}          & \multicolumn{2}{c|}{acertados}          & \multicolumn{2}{c|}{acertados} \\ 
+                                     & \multicolumn{2}{c|}{}                  & \multicolumn{2}{c|}{en posición}       & \multicolumn{2}{c|}{}                   & \multicolumn{2}{c|}{en posición}        & \multicolumn{2}{c|}{} \\ 
+                                     \cline{2-11}
+            & F & M & F & M & F & M & F & M & F & M \\\hline
+            100 metros planos & 3 & 4 & 0 & 0 & 2 & 0 & 0 & 0 & 0 & 0 \\
+            200 metros planos & 3 & 3 & 0 & 0 & 0 & 2 & 0 & 0 & 0 & 0 \\
+            400 metros planos & 3 & 5 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\
+            800 metros planos & 3 & 2 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+            1500 metros planos & 5 & 3 & 0 & 0 & 3 & 2 & 0 & 0 & 0 & 0 \\
+            5000 metros planos & 5 & 6 & 0 & 2 & 1 & 2 & 0 & 2 & 0 & 1 \\
+            10000 metros planos & 4 & 5 & 0 & 1 & 3 & 2 & 0 & 1 & 0 & 0 \\
+            100 metros con vallas & 3 & - & 1 & - & 2 & - & 0 & - & 0 & - \\
+            110 metros con vallas & - & 2 & - & 0 & - & 0 & - & 0 & - & 0 \\
+            400 metros con vallas & 7 & 5 & 2 & 1 & 3 & 3 & 1 & 1 & 1 & 1 \\
+            3000 metros con obstáculos & 3 & 3 & 1 & 2 & 1 & 2 & 0 & 2 & 0 & 1 \\
+            Salto de altura & 7 & 4 & 0 & 0 & 2 & 2 & 0 & 0 & 0 & 0 \\
+            Salto con pértiga & 4 & 6 & 0 & 2 & 2 & 2 & 0 & 1 & 0 & 1 \\
+            Salto largo & 5 & 4 & 2 & 1 & 1 & 1 & 1 & 0 & 0 & 0 \\
+            Salto triple & 7 & 5 & 1 & 0 & 1 & 2 & 1 & 0 & 1 & 0 \\
+            Lanzamiento de la bala & 4 & 4 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 \\
+            Lanzamiento del disco & 4 & 5 & 0 & 1 & 2 & 1 & 0 & 1 & 0 & 1 \\
+            Lanzamiento del martillo & 5 & 6 & 0 & 0 & 1 & 2 & 0 & 0 & 0 & 0 \\
+            Lanzamiento de la jabalina & 3 & 2 & 0 & 1 & 1 & 1 & 0 & 0 & 0 & 0 \\
+            Maratón & 2 & 3 & 0 & 1 & 0 & 1 & 0 & 1 & 0 & 1 \\
+            Marcha 20 kilómetros & 2 & 2 & 0 & 1 & 1 & 0 & 0 & 0 & 0 & 0 \\
+            Heptatlón & 3 & - & 0 & - & 0 & - & 0 & - & 0 & - \\
+            Decatlón & - & 5 & - & 1 & - & 1 & - & 1 & - & 1 \\
+            \hline
+            Total & 85 & 84 & 10 & 16 & 28 & 29 & 5 & 12 & 3 & 8 \\ \hline
+        \end{tabular}
+        \caption{Cantidad de predicciones acertadas con respecto al resultado real en Tokio 2020 (Parámetros optimizados con el error 1)}
+        \label{tab:error1tokio}
+    }
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \resizebox{15cm}{!} {
+        \begin{tabular}{|c|P{1.3cm}|P{1.2cm}|P{1.3cm}|P{1.2cm}|P{1.4cm}|P{1.2cm}|P{1.45cm}|P{1.2cm}|P{1.3cm}|P{1.2cm}|}
+            \hline
+            \multirow{2}{*}{Eventos} & \multicolumn{2}{c|}{No. de finalistas} & \multicolumn{2}{c|}{No. de finalistas} & \multicolumn{2}{c|}{No. de medallistas} & \multicolumn{2}{c|}{No. de medallistas} & \multicolumn{2}{c|}{No. de campeones} \\
+                                     & \multicolumn{2}{c|}{acertados}         & \multicolumn{2}{c|}{acertados}         & \multicolumn{2}{c|}{acertados}          & \multicolumn{2}{c|}{acertados}          & \multicolumn{2}{c|}{acertados} \\ 
+                                     & \multicolumn{2}{c|}{}                  & \multicolumn{2}{c|}{en posición}       & \multicolumn{2}{c|}{}                   & \multicolumn{2}{c|}{en posición}        & \multicolumn{2}{c|}{} \\ 
+                                     \cline{2-11}
+            & F & M & F & M & F & M & F & M & F & M \\\hline
+            100 metros planos & 4 & 3 & 2 & 0 & 2 & 0 & 2 & 0 & 1 & 0 \\
+            200 metros planos & 3 & 5 & 1 & 2 & 1 & 2 & 1 & 1 & 0 & 0 \\
+            400 metros planos & 4 & 5 & 1 & 1 & 2 & 2 & 1 & 1 & 1 & 0 \\
+            800 metros planos & 2 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\
+            1500 metros planos & 5 & 3 & 1 & 0 & 2 & 2 & 1 & 0 & 0 & 0 \\
+            5000 metros planos & 1 & 5 & 0 & 1 & 1 & 1 & 0 & 1 & 0 & 0 \\
+            10000 metros planos & 3 & 6 & 0 & 1 & 3 & 2 & 0 & 0 & 0 & 0 \\
+            100 metros con vallas & 3 & - & 0 & - & 2 & - & 0 & - & 0 & - \\
+            110 metros con vallas & - & 1 & - & 0 & - & 1 & - & 0 & - & 0 \\
+            400 metros con vallas & 6 & 7 & 1 & 4 & 3 & 3 & 1 & 3 & 1 & 1 \\
+            3000 metros con obstáculos & 4 & 3 & 1 & 2 & 1 & 2 & 1 & 2 & 0 & 1 \\
+            Salto de altura & 7 & 6 & 0 & 1 & 2 & 2 & 0 & 1 & 0 & 1 \\
+            Salto con pértiga & 4 & 6 & 1 & 2 & 2 & 1 & 0 & 1 & 0 & 1 \\
+            Salto largo & 4 & 4 & 1 & 0 & 1 & 1 & 1 & 0 & 0 & 0 \\
+            Salto triple & 7 & 5 & 2 & 0 & 1 & 2 & 1 & 0 & 1 & 0 \\
+            Lanzamiento de la bala & 5 & 4 & 4 & 3 & 2 & 3 & 2 & 3 & 1 & 1 \\
+            Lanzamiento del disco & 5 & 5 & 2 & 1 & 2 & 1 & 2 & 1 & 1 & 1 \\
+            Lanzamiento del martillo & 6 & 5 & 1 & 3 & 1 & 2 & 1 & 2 & 0 & 1 \\
+            Lanzamiento de la jabalina & 2 & 2 & 0 & 0 & 1 & 1 & 0 & 0 & 0 & 0 \\
+            Maratón & 3 & 1 & 0 & 1 & 1 & 1 & 0 & 1 & 0 & 1 \\
+            Marcha 20 kilómetros & 2 & 4 & 1 & 1 & 1 & 0 & 1 & 0 & 0 & 0 \\
+            Heptatlón & 2 & - & 0 & - & 0 & - & 0 & - & 0 & - \\
+            Decatlón & - & 4 & - & 1 & - & 1 & - & 1 & - & 1 \\
+            \hline
+            Total & 82 & 84 & 19 & 24 & 32 & 30 & 15 & 18 & 6 & 9 \\ \hline
+        \end{tabular}
+        \caption{Cantidad de predicciones acertadas con respecto al resultado real en Tokio 2020 (Parámetros optimizados con el error 2)}
+        \label{tab:error2tokio}
+    }
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \resizebox{15cm}{!} {
+        \begin{tabular}{|c|c|c|c|c|c|c|c|}
+            \hline
+            Criterio                   & Experto &    \%    & Error 1 &    \%    & Error 2 &    \%    & Total \\\hline
+            Finalistas                 & 179    & 53.27 \% & 169     & 50.30 \% & 166     & 49.40 \% & 336   \\
+            Finalistas en su posición  & 32     &  9.52 \% & 26      &  7.74 \% & 43      & 12.80 \% & 336   \\
+            Medallistas                & 68     & 53.97 \% & 57      & 45.24 \% & 62      & 49.21 \% & 126   \\
+            Medallistas en su posición & 26     & 20.63 \% & 17      & 13.49 \% & 33      & 26.19 \% & 126   \\ 
+            Campeones                  & 12     & 28.57 \% & 11      & 26.19 \% & 15      & 35.71 \% & 42   \\ \hline
+        \end{tabular}
+        \caption{Comparación de los resultados entre las tres predicciones en Tokio 2020}
+        \label{tab:resumentokio}
+    }
+\end{table}
+
+\subsection{Campeonato Mundial de Atletismo Oregón 2022}
+
+En el Campeonato Mundial de Atletismo Oregón 2022 se tomaron las marcas de los atletas obtenidas en los años 2020, 2021 y 2022, de este último hasta la fecha de inicio de la competencia. Además, se extrajeron todos los rankings reales obtenidos que permitieron evaluar la calidad de las predicciones. En esta competencia se contó durante el proceso de simulación con una lista de atletas que ya se conocía de antemano con bastante certeza que estarían presentes.
+
+En la tabla \ref{tab:manualoregon} se muestran los resultados luego de predecir cada uno de los eventos utilizando los valores del conjunto de parámetros definidos por un experto. La tabla \ref{tab:error1oregon} muestra los resultados con los parámetros optimizados con la métrica de error 1, mientras que la \ref{tab:error2oregon} los optimizados tomando el error 2. En la tabla \ref{tab:resumenoregon} se presenta una comparación entre los tres resultados obtenidos.
+
+\begin{table}[H]
+    \centering
+    \resizebox{15cm}{!} {
+        \begin{tabular}{|c|P{1.3cm}|P{1.2cm}|P{1.3cm}|P{1.2cm}|P{1.4cm}|P{1.2cm}|P{1.45cm}|P{1.2cm}|P{1.3cm}|P{1.2cm}|}
+            \hline
+            \multirow{2}{*}{Eventos} & \multicolumn{2}{c|}{No. de finalistas} & \multicolumn{2}{c|}{No. de finalistas} & \multicolumn{2}{c|}{No. de medallistas} & \multicolumn{2}{c|}{No. de medallistas} & \multicolumn{2}{c|}{No. de campeones} \\
+                                     & \multicolumn{2}{c|}{acertados}         & \multicolumn{2}{c|}{acertados}         & \multicolumn{2}{c|}{acertados}          & \multicolumn{2}{c|}{acertados}          & \multicolumn{2}{c|}{acertados} \\ 
+                                     & \multicolumn{2}{c|}{}                  & \multicolumn{2}{c|}{en posición}       & \multicolumn{2}{c|}{}                   & \multicolumn{2}{c|}{en posición}        & \multicolumn{2}{c|}{} \\ 
+                                     \cline{2-11}
+            & F & M & F & M & F & M & F & M & F & M \\\hline
+            100 metros planos & 6 & 5 & 1 & 3 & 3 & 3 & 1 & 3 & 1 & 1 \\
+            200 metros planos & 6 & 6 & 1 & 2 & 1 & 2 & 1 & 2 & 1 & 1 \\
+            400 metros planos & 5 & 5 & 0 & 2 & 2 & 2 & 0 & 2 & 0 & 1 \\
+            800 metros planos & 5 & 3 & 2 & 0 & 2 & 0 & 2 & 0 & 1 & 0 \\
+            1500 metros planos & 6 & 6 & 3 & 2 & 2 & 1 & 2 & 0 & 1 & 0 \\
+            5000 metros planos & 4 & 5 & 2 & 2 & 2 & 1 & 2 & 1 & 1 & 1 \\
+            10000 metros planos & 4 & 7 & 0 & 5 & 1 & 2 & 0 & 2 & 0 & 1 \\
+            100 metros con vallas & 8 & - & 1 & - & 2 & - & 0 & - & 0 & - \\
+            110 metros con vallas & - & 4 & - & 1 & - & 2 & - & 1 & - & 1 \\
+            400 metros con vallas & 7 & 6 & 4 & 1 & 3 & 2 & 3 & 0 & 1 & 0 \\
+            3000 metros con obstáculos & 6 & 4 & 2 & 0 & 2 & 1 & 2 & 0 & 1 & 0 \\
+            Salto de altura & 6 & 7 & 0 & 3 & 2 & 2 & 0 & 0 & 0 & 0 \\
+            Salto con pértiga & 6 & 6 & 3 & 3 & 2 & 2 & 0 & 2 & 0 & 1 \\
+            Salto largo & 7 & 5 & 2 & 0 & 2 & 1 & 2 & 0 & 1 & 0 \\
+            Salto triple & 6 & 5 & 2 & 2 & 2 & 2 & 1 & 2 & 1 & 1 \\
+            Lanzamiento de la bala & 6 & 8 & 0 & 5 & 2 & 2 & 0 & 2 & 0 & 1 \\
+            Lanzamiento del disco & 6 & 6 & 1 & 0 & 2 & 2 & 1 & 0 & 0 & 0 \\
+            Lanzamiento del martillo & 4 & 8 & 1 & 1 & 3 & 2 & 1 & 0 & 1 & 0 \\
+            Lanzamiento de la jabalina & 5 & 6 & 0 & 1 & 0 & 2 & 0 & 0 & 0 & 0 \\
+            Maratón & 4 & 5 & 0 & 2 & 1 & 3 & 0 & 1 & 0 & 1 \\
+            Marcha 20 kilómetros & 4 & 4 & 0 & 1 & 1 & 2 & 0 & 1 & 0 & 1 \\
+            Heptatlón & 6 & - & 3 & - & 2 & - & 2 & - & 1 & - \\
+            Decatlón & - & 5 & - & 0 & - & 2 & - & 0 & - & 0 \\
+            \hline
+            Total & 117 & 116 & 28 & 36 & 39 & 38 & 20 & 19 & 11 & 11 \\ \hline
+        \end{tabular}
+        \caption{Cantidad de predicciones acertadas con respecto al resultado real en Oregón 2022 (Parámetros fijados por expertos)}
+        \label{tab:manualoregon}
+    }
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \resizebox{15cm}{!} {
+        \begin{tabular}{|c|P{1.3cm}|P{1.2cm}|P{1.3cm}|P{1.2cm}|P{1.4cm}|P{1.2cm}|P{1.45cm}|P{1.2cm}|P{1.3cm}|P{1.2cm}|}
+            \hline
+            \multirow{2}{*}{Eventos} & \multicolumn{2}{c|}{No. de finalistas} & \multicolumn{2}{c|}{No. de finalistas} & \multicolumn{2}{c|}{No. de medallistas} & \multicolumn{2}{c|}{No. de medallistas} & \multicolumn{2}{c|}{No. de campeones} \\
+                                     & \multicolumn{2}{c|}{acertados}         & \multicolumn{2}{c|}{acertados}         & \multicolumn{2}{c|}{acertados}          & \multicolumn{2}{c|}{acertados}          & \multicolumn{2}{c|}{acertados} \\ 
+                                     & \multicolumn{2}{c|}{}                  & \multicolumn{2}{c|}{en posición}       & \multicolumn{2}{c|}{}                   & \multicolumn{2}{c|}{en posición}        & \multicolumn{2}{c|}{} \\ 
+                                     \cline{2-11}
+            & F & M & F & M & F & M & F & M & F & M \\\hline
+            100 metros planos & 3 & 4 & 0 & 0 & 2 & 2 & 0 & 0 & 0 & 0 \\
+            200 metros planos & 3 & 3 & 0 & 0 & 1 & 1 & 0 & 0 & 0 & 0 \\
+            400 metros planos & 4 & 3 & 0 & 1 & 0 & 1 & 0 & 1 & 0 & 1 \\
+            800 metros planos & 4 & 1 & 3 & 0 & 2 & 0 & 2 & 0 & 1 & 0 \\
+            1500 metros planos & 4 & 4 & 1 & 0 & 2 & 1 & 1 & 0 & 1 & 0 \\
+            5000 metros planos & 3 & 4 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\
+            10000 metros planos & 3 & 5 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\
+            100 metros con vallas & 5 & - & 1 & - & 1 & - & 0 & - & 0 & - \\
+            110 metros con vallas & - & 4 & - & 1 & - & 2 & - & 1 & - & 1 \\
+            400 metros con vallas & 6 & 5 & 3 & 2 & 3 & 2 & 3 & 2 & 1 & 1 \\
+            3000 metros con obstáculos & 3 & 4 & 0 & 1 & 0 & 2 & 0 & 0 & 0 & 0 \\
+            Salto de altura & 4 & 5 & 0 & 0 & 2 & 1 & 0 & 0 & 0 & 0 \\
+            Salto con pértiga & 5 & 5 & 0 & 2 & 2 & 2 & 0 & 2 & 0 & 1 \\
+            Salto largo & 5 & 4 & 0 & 1 & 2 & 1 & 0 & 1 & 0 & 0 \\
+            Salto triple & 6 & 3 & 3 & 0 & 2 & 2 & 1 & 0 & 1 & 0 \\
+            Lanzamiento de la bala & 5 & 6 & 0 & 2 & 1 & 2 & 0 & 2 & 0 & 1 \\
+            Lanzamiento del disco & 6 & 6 & 1 & 1 & 2 & 2 & 1 & 1 & 0 & 1 \\
+            Lanzamiento del martillo & 3 & 8 & 1 & 2 & 1 & 2 & 1 & 0 & 1 & 0 \\
+            Lanzamiento de la jabalina & 4 & 5 & 1 & 1 & 1 & 2 & 0 & 0 & 0 & 0 \\
+            Maratón & 2 & 2 & 1 & 0 & 1 & 0 & 1 & 0 & 1 & 0 \\
+            Marcha 20 kilómetros & 3 & 5 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\
+            Heptatlón & 4 & - & 0 & - & 2 & - & 0 & - & 0 & - \\
+            Decatlón & - & 1 & - & 0 & - & 0 & - & 0 & - & 0 \\
+            \hline
+            Total & 85 & 87 & 15 & 14 & 29 & 26 & 10 & 10 & 6 & 6 \\ \hline
+        \end{tabular}
+        \caption{Cantidad de predicciones acertadas con respecto al resultado real en Oregón 2022 (Parámetros optimizados con el error 1)}
+        \label{tab:error1oregon}
+    }
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \resizebox{15cm}{!} {
+        \begin{tabular}{|c|P{1.3cm}|P{1.2cm}|P{1.3cm}|P{1.2cm}|P{1.4cm}|P{1.2cm}|P{1.45cm}|P{1.2cm}|P{1.3cm}|P{1.2cm}|}
+            \hline
+            \multirow{2}{*}{Eventos} & \multicolumn{2}{c|}{No. de finalistas} & \multicolumn{2}{c|}{No. de finalistas} & \multicolumn{2}{c|}{No. de medallistas} & \multicolumn{2}{c|}{No. de medallistas} & \multicolumn{2}{c|}{No. de campeones} \\
+                                     & \multicolumn{2}{c|}{acertados}         & \multicolumn{2}{c|}{acertados}         & \multicolumn{2}{c|}{acertados}          & \multicolumn{2}{c|}{acertados}          & \multicolumn{2}{c|}{acertados} \\ 
+                                     & \multicolumn{2}{c|}{}                  & \multicolumn{2}{c|}{en posición}       & \multicolumn{2}{c|}{}                   & \multicolumn{2}{c|}{en posición}        & \multicolumn{2}{c|}{} \\ 
+                                     \cline{2-11}
+            & F & M & F & M & F & M & F & M & F & M \\\hline
+            100 metros planos & 5 & 4 & 1 & 2 & 2 & 2 & 1 & 2 & 1 & 1 \\
+            200 metros planos & 4 & 5 & 0 & 2 & 0 & 2 & 0 & 2 & 0 & 1 \\
+            400 metros planos & 4 & 3 & 0 & 1 & 2 & 1 & 0 & 1 & 0 & 1 \\
+            800 metros planos & 3 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+            1500 metros planos & 4 & 3 & 0 & 0 & 2 & 1 & 0 & 0 & 0 & 0 \\
+            5000 metros planos & 1 & 4 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\
+            10000 metros planos & 3 & 6 & 1 & 3 & 0 & 2 & 0 & 1 & 0 & 0 \\
+            100 metros con vallas & 4 & - & 0 & - & 1 & - & 0 & - & 0 & - \\
+            110 metros con vallas & - & 3 & - & 0 & - & 2 & - & 0 & - & 0 \\
+            400 metros con vallas & 5 & 6 & 4 & 0 & 3 & 2 & 3 & 0 & 1 & 0 \\
+            3000 metros con obstáculos & 5 & 4 & 1 & 0 & 1 & 2 & 1 & 0 & 1 & 0 \\
+            Salto de altura & 5 & 6 & 1 & 0 & 2 & 1 & 0 & 0 & 0 & 0 \\
+            Salto con pértiga & 5 & 5 & 1 & 2 & 2 & 2 & 0 & 2 & 0 & 1 \\
+            Salto largo & 5 & 3 & 1 & 1 & 1 & 1 & 1 & 1 & 0 & 0 \\
+            Salto triple & 6 & 3 & 5 & 1 & 2 & 2 & 2 & 0 & 1 & 0 \\
+            Lanzamiento de la bala & 5 & 6 & 0 & 3 & 1 & 2 & 0 & 2 & 0 & 1 \\
+            Lanzamiento del disco & 5 & 5 & 1 & 1 & 2 & 2 & 1 & 1 & 0 & 1 \\
+            Lanzamiento del martillo & 4 & 8 & 2 & 1 & 2 & 2 & 2 & 0 & 1 & 0 \\
+            Lanzamiento de la jabalina & 5 & 5 & 0 & 2 & 0 & 2 & 0 & 1 & 0 & 0 \\
+            Maratón & 2 & 3 & 0 & 1 & 0 & 1 & 0 & 1 & 0 & 0 \\
+            Marcha 20 kilómetros & 3 & 4 & 1 & 1 & 1 & 1 & 0 & 0 & 0 & 0 \\
+            Heptatlón & 5 & - & 0 & - & 2 & - & 0 & - & 0 & - \\
+            Decatlón & - & 3 & - & 1 & - & 0 & - & 0 & - & 0 \\
+            \hline
+            Total & 88 & 90 & 19 & 22 & 26 & 31 & 11 & 14 & 5 & 6 \\ \hline
+        \end{tabular}
+        \caption{Cantidad de predicciones acertadas con respecto al resultado real en Oregón 2022 (Parámetros optimizados con el error 2)}
+        \label{tab:error2oregon}
+    }
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \resizebox{15cm}{!} {
+        \begin{tabular}{|c|c|c|c|c|c|c|c|}
+            \hline
+            Criterio                   & Experto & \%       & Error 1 & \%       & Error 2 & \%       & Total \\\hline
+            Finalistas                 & 233    & 69.35 \% & 172     & 51.19 \% & 178     & 52.98 \% & 336   \\
+            Finalistas en su posición  & 64     & 19.05 \% & 29      &  8.63 \% & 41      & 12.20 \% & 336   \\
+            Medallistas                & 77     & 61.11 \% & 55      & 43.65 \% & 57      & 45.24 \% & 126   \\
+            Medallistas en su posición & 39     & 30.95 \% & 20      & 15.87 \% & 25      & 19.84 \% & 126   \\ 
+            Campeones                  & 22     & 52.38 \% & 12      & 28.57 \% & 11      & 26.19 \% & 42    \\ \hline
+        \end{tabular}
+        \caption{Comparación de los resultados entre las tres predicciones en Oregón 2022}
+        \label{tab:resumenoregon}
+    }
+\end{table}
+
+\subsection{Discusión}
+
+Una vez expuestos los resultados de los Juegos de Tokio 2020, hay varios aspectos que coinciden en las tres tablas presentadas referentes a la precisión de cada predicción (\ref{tab:manualtokio}, \ref{tab:error1tokio}, \ref{tab:error2tokio}). La mayor cantidad de finalistas acertados fueron obtenidos en las disciplinas de 400 m con vallas, el salto de altura y el salto triple; siendo los 400 m con vallas la que mayor cantidad de posiciones exactas obtuvo. Sin embargo, si solo se analizan los medallistas, las disciplinas que mayor precisión tienen son los 400 m con vallas, el lanzamiento de la bala, los 1500 m planos y los 10 000 m planos; donde los dos primeros son los de mayor cantidad de posiciones acertadas. En el caso de los campeones, los 400 metros con vallas y el lanzamiento de la bala acertaron en ambos sexos. Indiscutiblemente, los 400 m con vallas es el evento que mayor éxito tuvo en las predicciones de Tokio 2020.
+
+La tabla de los porcientos de precisión para Tokio 2020 (\ref{tab:resumentokio}) muestra que los parámetros escogidos por expertos son los que mejor resultados proporcionaron a la hora de analizar los finalistas y medallistas acertados. Para el caso de la mayor cantidad de posiciones acertadas para los finalistas, medallistas y campeones, las predicciones con los parámetros obtenidos usando el optimizador con la métrica del error 2 fueron los más certeros.
+
+En los resultados de Oregón 2022 no existió tanta unanimidad entre las diferentes predicciones (\ref{tab:manualoregon}, \ref{tab:error1oregon}, \ref{tab:error2oregon}). Los 400 m con vallas y el lanzamiento de la bala fueron de las disciplinas con mayor número de finalistas en cada tabla. Específicamente para las predicciones que usaron los parámetros obtenidos con el criterio de experto, el lanzamiento de la bala fue el evento mejor predicho con 14 de 16 atletas. En la cantidad de finalistas acertados en posición, los 400 m con vallas coincidió en los tres casos entre los de mejor resultados, pero el salto con pértiga para la predicción con parámetros fijados por experto y el salto triple para los obtenidos con el error 2 fueron los que más se destacaron. La mayor cantidad de medallistas acertados se obtuvieron para los 400 m con vallas y los 100 m planos; sin embargo, al analizar los que quedaron en la posición exacta solo destaca los 400 m con vallas. Se predijeron correctamente los campeones de ambos sexos al usar los parámetros definidos por experto en las disciplinas de 100 m, 200 m y 5000 m planos y el salto triple. Para los parámetros obtenidos con el error uno solo se predijeron ambos campeones en los 400 m con vallas y, para el error 2 los 100 m planos.
+
+La tabla de porcientos de precisión \ref{tab:resumenoregon} muestra que indiscutiblemente para Oregón 2020 las mejores predicciones se obtuvieron con los parámetros definidos por experto con diferencias significativas.
+
+De forma general, la disciplina que mejor resultados obtuvo en las predicciones fue los 400 m con vallas, destacándose entre las mejores en cada una de las variables calculadas.
+
+Los datos del certamen de atletismo de los Juegos Olímpicos de Tokio 2020 estuvieron distorsionados debido al fenómeno Covid-19, ya que se conocían muy pocas marcas de los atletas por la cancelación de certámenes deportivos durante la pandemia. Esta puede ser una de las razones por las cuales cuando se analiza el Campeonato Mundial de Atletismo celebrado en Oregón, los porcientos de precisión llegan a ser mucho más altos. Además, para esta última competencia se contó durante el proceso de simulación con una lista de atletas que ya se sabía de antemano con bastante certeza que estarían presentes.
+
+Lo que si constituye una afirmación para ambas competencias, es que los parámetros que fueron escogidos por un experto fueron los que generalmente mayor éxito tuvieron durante el proceso de predicción, aunque en el caso de Tokio 2020 no hubo diferencias significativas. Además, los segundos mejores resultados se obtuvieron con la configuración que generó el optimizador tomando como métrica el error 2.
+
+Los valores de los parámetros escogidos por expertos están sujetos al error humano, por lo que perfectamente se puede proponer otro conjunto que dé mejores predicciones. Independientemente de esto, el optimizador propuesto en la presente investigación proporciona configuraciones cuyos resultados no se encuentran tan alejados de la realidad, por lo que puede llegar a ser una herramienta muy útil en el futuro y más aún cuando no existan expertos que ayuden a ajustar estos valores.
